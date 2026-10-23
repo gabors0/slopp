@@ -81,7 +81,7 @@ pub fn install(
 
 fn check_sha256(path: &Path, expected: &str) -> anyhow::Result<()> {
     let bytes = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
-    let actual = format!("{:x}", Sha256::digest(&bytes));
+    let actual = crate::dbadmin::hex(&Sha256::digest(&bytes));
     if actual != expected {
         bail!(
             "{} doesn't match its checksum (expected {expected}, got {actual})",

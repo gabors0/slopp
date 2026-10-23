@@ -117,7 +117,7 @@ pub fn ensure_certificate(layout: &Layout) -> anyhow::Result<()> {
         "127.0.0.1".to_string(),
         "::1".to_string(),
     ];
-    let rcgen::CertifiedKey { cert, key_pair } =
+    let rcgen::CertifiedKey { cert, signing_key } =
         rcgen::generate_simple_self_signed(names).context("generating a certificate")?;
     for path in [&cert_path, &key_path] {
         if let Some(dir) = path.parent() {
@@ -126,7 +126,7 @@ pub fn ensure_certificate(layout: &Layout) -> anyhow::Result<()> {
     }
     std::fs::write(&cert_path, cert.pem())
         .with_context(|| format!("writing {}", cert_path.display()))?;
-    write_private(&key_path, &key_pair.serialize_pem())?;
+    write_private(&key_path, &signing_key.serialize_pem())?;
     Ok(())
 }
 

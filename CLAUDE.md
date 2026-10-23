@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-SLOPP is an XAMPP port: the stock servers (Apache httpd + PHP, MariaDB, phpMyAdmin or Adminer, and Mailpit for mail) driven by a Rust control panel on GPUI via `gpui-kit` 0.7.1. Modules are deliberately limited to Apache, MySQL and Mailpit (no Tomcat or FTP). Linux, macOS and Windows (new) are supported; keep cross-platform seams (`cfg(unix)`/`cfg(windows)`) intact.
+SLOPP is an XAMPP port: the stock servers (Apache httpd + PHP, MariaDB, phpMyAdmin or Adminer, and Mailpit for mail) driven by a Rust control panel on GPUI via `gpui-kit` 0.8.0. Modules are deliberately limited to Apache, MySQL and Mailpit (no Tomcat or FTP). Linux, macOS and Windows (new) are supported; keep cross-platform seams (`cfg(unix)`/`cfg(windows)`) intact.
 
 ## Commands
 

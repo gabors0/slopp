@@ -661,7 +661,7 @@ fn unzip(archive: &Path, dir: &Path, names: &[&str]) -> anyhow::Result<Vec<(Path
         if !entry.is_file() {
             continue;
         }
-        let entry_name = base_name(entry.name()).to_string();
+        let entry_name = base_name(&entry.name().context("reading the archive")?).to_string();
         let Some(&name) = names.iter().find(|&&n| n == entry_name) else {
             continue;
         };

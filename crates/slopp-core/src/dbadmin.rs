@@ -135,15 +135,30 @@ pub(crate) fn download(
     Ok(())
 }
 
+/// Lowercase hex, as checksums are written.
+pub(crate) fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
 /// Fails unless the file's SHA-256 is `expected` (lowercase hex), the digest
 /// GitHub's API lists for a release download.
 pub(crate) fn check_sha256(path: &Path, expected: &str) -> anyhow::Result<()> {
     use sha2::{Digest as _, Sha256};
+    use std::io::Read as _;
     let mut file =
         std::fs::File::open(path).with_context(|| format!("reading {}", path.display()))?;
     let mut hasher = Sha256::new();
-    std::io::copy(&mut file, &mut hasher).with_context(|| format!("reading {}", path.display()))?;
-    let actual = format!("{:x}", hasher.finalize());
+    let mut buf = vec![0; 64 * 1024];
+    loop {
+        let n = file
+            .read(&mut buf)
+            .with_context(|| format!("reading {}", path.display()))?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    let actual = hex(&hasher.finalize());
     if actual != expected {
         anyhow::bail!(
             "the download doesn't match GitHub's digest (expected {expected}, got {actual})"
