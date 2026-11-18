@@ -129,6 +129,9 @@ pub struct Settings {
     /// Look for a new SLOPP release on GitHub when the panel opens, and
     /// daily while it runs.
     pub check_updates: bool,
+    /// Whether the panel shows and starts Mailpit. Off, it's left out of
+    /// the rack, the tray and Start all.
+    pub mailpit_enabled: bool,
 }
 
 impl Default for Settings {
@@ -145,6 +148,7 @@ impl Default for Settings {
             appearance: Appearance::System,
             compact: false,
             check_updates: true,
+            mailpit_enabled: true,
         }
     }
 }
@@ -181,6 +185,19 @@ impl Settings {
         Ok(())
     }
 
+    /// Whether `module` is enabled: only Mailpit can be turned off.
+    pub fn enabled(&self, module: Module) -> bool {
+        module != Module::Mailpit || self.mailpit_enabled
+    }
+
+    /// The enabled modules, in rack order.
+    pub fn modules(&self) -> Vec<Module> {
+        Module::ALL
+            .into_iter()
+            .filter(|&m| self.enabled(m))
+            .collect()
+    }
+
     pub fn root(&self) -> PathBuf {
         self.root
             .clone()
@@ -191,6 +208,15 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mailpit_can_be_disabled() {
+        let mut s = Settings::default();
+        assert_eq!(s.modules(), Module::ALL.to_vec());
+        s.mailpit_enabled = false;
+        assert!(!s.enabled(Module::Mailpit));
+        assert_eq!(s.modules(), vec![Module::Apache, Module::MySql]);
+    }
 
     #[test]
     fn missing_file_gives_defaults() {

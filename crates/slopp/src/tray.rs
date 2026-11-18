@@ -191,12 +191,14 @@ impl TrayState {
                 TrayCommand::OpenDbAdmin(tool),
             ));
         }
-        menu.push(item(
-            "Open Mailpit",
-            MenuIcon::Mail,
-            self.running(Module::Mailpit),
-            TrayCommand::OpenMailpit,
-        ));
+        if self.module(Module::Mailpit).is_some() {
+            menu.push(item(
+                "Open Mailpit",
+                MenuIcon::Mail,
+                self.running(Module::Mailpit),
+                TrayCommand::OpenMailpit,
+            ));
+        }
         menu.push(MenuEntry::Separator);
         menu.push(item(
             "Show panel",

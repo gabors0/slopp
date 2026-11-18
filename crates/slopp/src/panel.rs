@@ -213,17 +213,22 @@ impl Panel {
         cx: &mut Context<Self>,
     ) {
         match event {
+            // Saved as each change is made, so quietly.
             SettingsEvent::Save(settings) => {
+                let old = self.controller.read(cx).settings().clone();
                 let result = self.controller.update(cx, |controller, cx| {
                     controller.apply_settings(settings.as_ref().clone(), cx)
                 });
                 match result {
                     Ok(()) => {
-                        let stack = self.controller.read(cx).stack().clone();
-                        self.settings_view
-                            .update(cx, |view, cx| view.reload(&stack, window, cx));
+                        // Programs found anew show in the form; otherwise it
+                        // stays as it is, so the field being typed in keeps focus.
+                        if old.root != settings.root || old.binaries != settings.binaries {
+                            let stack = self.controller.read(cx).stack().clone();
+                            self.settings_view
+                                .update(cx, |view, cx| view.reload(&stack, window, cx));
+                        }
                         apply_theme(window, cx);
-                        window.push_notification(Notification::success("Settings saved"), cx);
                     }
                     Err(text) => window.push_notification(Notification::error(text), cx),
                 }

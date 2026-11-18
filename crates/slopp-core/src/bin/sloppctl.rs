@@ -49,6 +49,11 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    // Without a module, only the enabled ones.
+    let modules = match args.get(1) {
+        None => settings.modules(),
+        Some(_) => modules,
+    };
     let stack = Stack::new(settings);
 
     let ok = match command.as_str() {

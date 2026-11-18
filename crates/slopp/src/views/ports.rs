@@ -14,7 +14,9 @@ use crate::theme::{self, Palette};
 pub fn render(ctl: &Controller, cx: &Context<Panel>) -> impl IntoElement {
     let stack = ctl.stack();
     // Which module each configured port belongs to.
-    let ours: Vec<(u16, Module, &'static str)> = Module::ALL
+    let ours: Vec<(u16, Module, &'static str)> = stack
+        .settings()
+        .modules()
         .into_iter()
         .flat_map(|m| {
             stack

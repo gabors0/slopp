@@ -350,7 +350,13 @@ impl Controller {
     }
 
     pub fn all_running(&self) -> bool {
-        self.rows.iter().all(Row::running)
+        self.visible_rows().all(Row::running)
+    }
+
+    /// The rows of the enabled modules, the ones the panel and tray show.
+    pub fn visible_rows(&self) -> impl Iterator<Item = &Row> {
+        let settings = self.stack.settings();
+        self.rows.iter().filter(|r| settings.enabled(r.module))
     }
 
     pub fn has_tray(&self) -> bool {
@@ -383,8 +389,7 @@ impl Controller {
 
     pub fn tray_snapshot(&self, cx: &App) -> TrayState {
         let modules = self
-            .rows
-            .iter()
+            .visible_rows()
             .map(|row| TrayModule {
                 module: row.module,
                 lamp: row.lamp(),
@@ -430,7 +435,7 @@ impl Controller {
                 ),
             );
         }
-        for m in Module::ALL {
+        for m in self.stack.settings().modules() {
             match self.stack.describe(m) {
                 Some(text) => self.log.push(Some(m), Kind::Info, text),
                 None => {
@@ -445,7 +450,13 @@ impl Controller {
     }
 
     fn autostart(&mut self, cx: &mut Context<Self>) {
-        let modules = self.stack.settings().autostart.clone();
+        let settings = self.stack.settings();
+        let modules: Vec<_> = settings
+            .autostart
+            .iter()
+            .copied()
+            .filter(|&m| settings.enabled(m))
+            .collect();
         if modules.is_empty() {
             return;
         }
@@ -672,7 +683,7 @@ impl Controller {
     }
 
     pub fn start_all(&mut self, cx: &mut Context<Self>) {
-        for m in Module::ALL {
+        for m in self.stack.settings().modules() {
             if !self.row(m).running() {
                 self.start(m, cx);
             }
@@ -1192,6 +1203,14 @@ impl Controller {
                         format!("Restart {m} to use the new settings"),
                     );
                 }
+            }
+        }
+        // A module turned off doesn't keep running out of sight.
+        for m in Module::ALL {
+            if old.enabled(m) && !settings.enabled(m) && self.row(m).running() {
+                self.log
+                    .push(Some(m), Kind::Info, format!("{m} is disabled, stopping it"));
+                self.stop(m, cx);
             }
         }
         self.changed(cx);

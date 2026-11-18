@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 
 use gpui_kit::component::button::{Button, ButtonGroup, ButtonVariants as _};
-use gpui_kit::component::input::{Input, InputState};
+use gpui_kit::component::input::{Input, InputEvent, InputState};
 use gpui_kit::component::switch::Switch;
 use gpui_kit::component::{Disableable as _, Selectable as _, Sizable as _, h_flex, v_flex};
 use gpui_kit::prelude::*;
@@ -28,6 +28,8 @@ pub enum SettingsEvent {
 
 struct Field {
     state: Entity<InputState>,
+    /// Saves the form when the field is left or Enter is pressed.
+    _save: Subscription,
 }
 
 impl Field {
@@ -43,7 +45,15 @@ impl Field {
                 .placeholder(placeholder)
                 .default_value(value.unwrap_or_default())
         });
-        Self { state }
+        let _save = cx.subscribe(
+            &state,
+            |this: &mut SettingsView, _, event: &InputEvent, cx| {
+                if matches!(event, InputEvent::Blur | InputEvent::PressEnter { .. }) {
+                    this.save(cx);
+                }
+            },
+        );
+        Self { state, _save }
     }
 
     fn text(&self, cx: &gpui_kit::App) -> String {
@@ -77,6 +87,7 @@ pub struct SettingsView {
     autostart_apache: bool,
     autostart_mysql: bool,
     autostart_mailpit: bool,
+    mailpit_enabled: bool,
     stop_on_exit: bool,
     close_to_tray: bool,
     check_updates: bool,
@@ -186,6 +197,7 @@ impl SettingsView {
             autostart_apache: s.autostart.contains(&Module::Apache),
             autostart_mysql: s.autostart.contains(&Module::MySql),
             autostart_mailpit: s.autostart.contains(&Module::Mailpit),
+            mailpit_enabled: s.mailpit_enabled,
             stop_on_exit: s.stop_on_exit,
             close_to_tray: s.close_to_tray,
             check_updates: s.check_updates,
@@ -274,14 +286,18 @@ impl SettingsView {
             // Toggled from the title bar, not this form.
             compact: Controller::global(cx).read(cx).settings().compact,
             check_updates: self.check_updates,
+            mailpit_enabled: self.mailpit_enabled,
         })
     }
 
+    /// Saves the form as it is, when it's valid and differs from what's saved.
     fn save(&mut self, cx: &mut Context<Self>) {
         match self.collect(cx) {
             Ok(settings) => {
                 self.error = None;
-                cx.emit(SettingsEvent::Save(Box::new(settings)));
+                if &settings != Controller::global(cx).read(cx).settings() {
+                    cx.emit(SettingsEvent::Save(Box::new(settings)));
+                }
             }
             Err(err) => self.error = Some(err),
         }
@@ -354,7 +370,7 @@ fn toggle(
         .child(Switch::new(id).checked(on).on_change(cx.listener(
             move |this, value: &bool, _, cx| {
                 set(this, *value);
-                cx.notify();
+                this.save(cx);
             },
         )))
         .child(div().text_size(px(13.)).child(label))
@@ -541,12 +557,21 @@ impl Render for SettingsView {
                 |this, v| this.autostart_mysql = v,
             ))
             .child(toggle(
-                "autostart-mailpit",
-                "Start Mailpit when SLOPP opens",
-                self.autostart_mailpit,
+                "mailpit-enabled",
+                "Use Mailpit (off hides it and leaves it out of Start all)",
+                self.mailpit_enabled,
                 cx,
-                |this, v| this.autostart_mailpit = v,
+                |this, v| this.mailpit_enabled = v,
             ))
+            .when(self.mailpit_enabled, |this| {
+                this.child(toggle(
+                    "autostart-mailpit",
+                    "Start Mailpit when SLOPP opens",
+                    self.autostart_mailpit,
+                    cx,
+                    |this, v| this.autostart_mailpit = v,
+                ))
+            })
             .child(toggle(
                 "close-to-tray",
                 if cfg!(target_os = "macos") {
@@ -594,20 +619,13 @@ impl Render for SettingsView {
             .py_4()
             .border_t_1()
             .border_color(Palette::border())
-            .child(
-                Button::new("save-settings")
-                    .primary()
-                    .small()
-                    .label("Save settings")
-                    .on_click(cx.listener(|this, _, _, cx| this.save(cx))),
-            )
-            .when_some(self.error.clone(), |this, error| {
-                this.child(
-                    div()
-                        .text_size(px(13.))
-                        .text_color(Palette::fault())
-                        .child(error),
-                )
+            .text_size(px(13.))
+            // Changes save as they're made; this says why one wasn't.
+            .child(match self.error.clone() {
+                Some(error) => div().text_color(Palette::fault()).child(error),
+                None => div()
+                    .text_color(Palette::text_tertiary())
+                    .child("Changes are saved as you make them."),
             });
 
         div()

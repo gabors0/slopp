@@ -149,10 +149,14 @@ fn reopen_panel(page: panel::Page, cx: &mut App) {
 }
 
 fn open_panel(page: panel::Page, cx: &mut App) {
-    let compact = Controller::global(cx).read(cx).settings().compact;
+    let settings = Controller::global(cx).read(cx).settings().clone();
+    let compact = settings.compact;
     // Compact is a small dialog-like window with just the rack.
     let (content, min_size) = if compact {
-        let content = size(px(460.), views::rack::compact_height());
+        let content = size(
+            px(460.),
+            views::rack::compact_height(settings.modules().len()),
+        );
         (content, content)
     } else {
         (size(px(1080.), px(720.)), size(px(900.), px(520.)))

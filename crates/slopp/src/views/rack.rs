@@ -21,9 +21,8 @@ const UNIT_HEIGHT: f32 = 76.;
 const COMPACT_UNIT_HEIGHT: f32 = 52.;
 /// The compact window's content: the title bar, then (with the padding
 /// and gap around them) the rack with its border and the bar under it.
-pub fn compact_height() -> Pixels {
-    TITLE_BAR_HEIGHT
-        + px(12. + (Module::ALL.len() as f32 * COMPACT_UNIT_HEIGHT + 2.) + 12. + 24. + 12.)
+pub fn compact_height(units: usize) -> Pixels {
+    TITLE_BAR_HEIGHT + px(12. + (units as f32 * COMPACT_UNIT_HEIGHT + 2.) + 12. + 24. + 12.)
 }
 /// The LED's bezel, and the gap from it to the module's name.
 const BEZEL_WIDTH: f32 = 18.;
@@ -37,7 +36,7 @@ pub fn render(ctl: &Controller, cx: &Context<Panel>) -> impl IntoElement {
         .border_color(Palette::border())
         .bg(Palette::face())
         .overflow_hidden();
-    for (i, row) in ctl.rows.iter().enumerate() {
+    for (i, row) in ctl.visible_rows().enumerate() {
         rack = rack.child(render_unit(ctl, row, i == 0, cx));
     }
     rack
@@ -382,7 +381,7 @@ pub fn render_compact(ctl: &Controller, cx: &Context<Panel>) -> impl IntoElement
         .border_color(Palette::border())
         .bg(Palette::face())
         .overflow_hidden();
-    for (i, row) in ctl.rows.iter().enumerate() {
+    for (i, row) in ctl.visible_rows().enumerate() {
         rack = rack.child(render_compact_unit(ctl, row, i == 0, cx));
     }
     rack
